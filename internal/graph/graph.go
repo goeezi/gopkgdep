@@ -38,7 +38,7 @@ func (g *Graph) Less(a, b string) bool {
 	deptha := g.Depth(a)
 	depthb := g.Depth(b)
 	if deptha != depthb {
-		return deptha > depthb
+		return deptha < depthb
 	}
 	return a < b
 }

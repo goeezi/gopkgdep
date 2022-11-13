@@ -13,7 +13,7 @@ import (
 	"github.com/goeezi/gopkgdep/internal/pathutil"
 )
 
-func Render(w io.Writer, g *graph.Graph, focus func(string) int, strata bool) error {
+func Render(w io.Writer, g *graph.Graph, focus func(string) int, layers bool) error {
 	nodes, err := linq.ToMapKV(linq.Select(
 		linq.Index(linq.Order(linq.SelectKeys(linq.FromMap(g.Pkgs)))),
 		func(e linq.KV[int, string]) linq.KV[string, int] {
@@ -85,7 +85,7 @@ func Render(w io.Writer, g *graph.Graph, focus func(string) int, strata bool) er
 			printf("bgcolor=\"#%02x%02[1]x%02[1]x\";\n", c)
 		}
 		var label, fill string
-		if strata {
+		if layers {
 			label = fmt.Sprintf(
 				`<<FONT>%s<BR/><FONT POINT-SIZE="16"><B>%s</B></FONT></FONT>>`,
 				strings.Join(path[:len(path)-1], "<BR/>"),
@@ -124,7 +124,7 @@ func Render(w io.Writer, g *graph.Graph, focus func(string) int, strata bool) er
 		outf("}\n")
 	}
 
-	if strata {
+	if layers {
 		printf("\n")
 		pkgs := linq.SelectKeys(linq.FromMap(g.Pkgs)).OrderComp(g.Less)
 		for _, depthPkgs := range linq.GroupBy(pkgs, g.Depth).ToSlice() {

@@ -20,7 +20,7 @@ func Render(w io.Writer, g *graph.Graph, focus func(string) int, compact bool) e
 
 	punctFormat := "%s"
 	if tty {
-		punctFormat = "\x1b[38;2;180;60;180m%s\x1b[0m"
+		punctFormat = "\x1b[38;2;190;70;190m%s\x1b[0m"
 	}
 
 	printf := func(format string, args ...any) error {

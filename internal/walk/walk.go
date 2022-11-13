@@ -2,7 +2,6 @@ package walk
 
 import (
 	"go/build"
-	"log"
 	"path"
 	"strings"
 
@@ -12,30 +11,27 @@ import (
 )
 
 type Walker struct {
-	Import func(path string) (*build.Package, error)
-	Open   bool
+	Import  func(path string) (*build.Package, error)
+	Closed  bool
+	Graph   *graph.Graph
+	Matcher *match.Matcher
 }
 
 func (w *Walker) Walk(
-	g *graph.Graph,
-	m *match.Matcher,
 	pkgs set.Set[string],
 ) (set.Set[string], error) {
 	filtered := set.Set[string]{}
 	for p := range pkgs {
 		if p == "C" {
 			// C isn't really a package.
-			g.Pkgs["C"] = nil
+			w.Graph.Pkgs["C"] = nil
 			continue
 		}
-		p := m.Resolve(p)
-		match := m.Match(p)
-		p, err := m.Rel(p)
-		if err != nil {
-			return nil, err
-		}
+		p := w.Matcher.Resolve(p)
+		match := w.Matcher.Match(p)
+		p = w.Matcher.Rel(p)
 		filtered.Add(p)
-		if _, ok := g.Pkgs[p]; ok {
+		if _, ok := w.Graph.Pkgs[p]; ok {
 			// already seen
 			continue
 		}
@@ -47,25 +43,21 @@ func (w *Walker) Walk(
 		if err != nil {
 			return nil, err
 		}
-		log.Printf("%s => %#v", p, pkg.Imports)
 
 		deps := set.Set[string]{}
-		candidates, err := w.candidates(m, match, pkg.Imports)
+		// log.Printf("CANDIDATES FOR %v:", p)
+		candidates, err := w.candidates(w.Matcher, match, pkg.Imports)
 		if err != nil {
 			return nil, err
 		}
 		for _, imp := range candidates {
-			dep, err := m.Rel(m.Resolve(imp))
-			if err != nil {
-				return nil, err
-			}
-			deps.Add(dep)
+			deps.Add(w.Matcher.Rel(w.Matcher.Resolve(imp)))
 		}
-		deps, err = w.Walk(g, m, deps)
+		deps, err = w.Walk(deps)
 		if err != nil {
 			return nil, err
 		}
-		g.Pkgs[p] = deps
+		w.Graph.Pkgs[p] = deps
 	}
 	return filtered, nil
 }
@@ -76,7 +68,8 @@ func (w *Walker) candidates(
 	deps []string,
 ) ([]string, error) {
 	switch {
-	case match && w.Open:
+	case match && !w.Closed:
+		// log.Printf("  MATCH && OPEN: %v", deps)
 		var c []string
 		for _, dep := range deps {
 			if m.MatchUnlessExcludedStdLibPackage(dep) {
@@ -84,11 +77,13 @@ func (w *Walker) candidates(
 			}
 		}
 		return c, nil
-	case match || w.Open:
+	case match || !w.Closed:
+		// log.Printf("  MATCH || OPEN: %v", deps)
 		var c []string
 		for _, dep := range deps {
 			dep := m.Resolve(dep)
 			if m.Match(dep) {
+				// log.Printf("    MATCHED: %v", dep)
 				c = append(c, dep)
 			}
 		}

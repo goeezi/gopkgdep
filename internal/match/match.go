@@ -5,10 +5,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/goeezi/gopkgdep/internal/set"
 	"golang.org/x/mod/modfile"
 )
 
 type Matcher struct {
+	Paths  set.Set[string]
 	InclRE *regexp.Regexp
 	ExclRE *regexp.Regexp
 	Module string
@@ -18,6 +20,8 @@ type Matcher struct {
 func (m *Matcher) Match(pkg string) bool {
 	switch {
 	case !strings.Contains(pkg, ".") && !m.Stdlib:
+		return false
+	case !m.Paths.Has(m.Rel(pkg)):
 		return false
 	case !m.InclRE.MatchString(pkg):
 		return false
@@ -42,13 +46,16 @@ func (m *Matcher) Resolve(pkg string) string {
 	return pkg
 }
 
-func (m *Matcher) Rel(pkg string) (string, error) {
+func (m *Matcher) Rel(pkg string) string {
 	if strings.HasPrefix(pkg, m.Module) {
 		rel, err := filepath.Rel(m.Module, pkg)
+		if err != nil {
+			panic(err)
+		}
 		if rel != "." {
 			rel = "./" + rel
 		}
-		return rel, err
+		return rel
 	}
-	return pkg, nil
+	return pkg
 }
