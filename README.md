@@ -24,7 +24,6 @@ gopkgdep -h
 gopkgdep
 gopkgdep -compact
 gopkgdep -compact -closed
-gopkgdep -compact -closed ./internal/...
 ```
 
 ![demo](doc/demo.gif)
