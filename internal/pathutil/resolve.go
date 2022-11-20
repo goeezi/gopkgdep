@@ -35,7 +35,6 @@ func ResolvePaths(paths []string) (set.Set[string], error) {
 			err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 				if !d.IsDir() && filepath.Ext(path) == ".go" {
 					resolvedPaths.Add("./" + filepath.Dir(path))
-					return nil
 				}
 				return nil
 			})

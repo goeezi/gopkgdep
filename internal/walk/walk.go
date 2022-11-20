@@ -16,6 +16,8 @@ package walk
 
 import (
 	"go/build"
+	"log"
+	"os"
 	"path"
 	"strings"
 
@@ -35,6 +37,9 @@ func (w *Walker) Walk(
 	pkgs set.Set[string],
 ) (set.Set[string], error) {
 	filtered := set.Set[string]{}
+	if len(pkgs) == 0 {
+		return filtered, nil
+	}
 	for p := range pkgs {
 		if p == "C" {
 			// C isn't really a package.
@@ -43,7 +48,10 @@ func (w *Walker) Walk(
 		}
 		p := w.Matcher.Resolve(p)
 		match := w.Matcher.Match(p)
-		p = w.Matcher.Rel(p)
+		p, err := w.Matcher.Rel(p)
+		if err != nil {
+			return nil, err
+		}
 		filtered.Add(p)
 		if _, ok := w.Graph.Pkgs[p]; ok {
 			// already seen
@@ -55,7 +63,8 @@ func (w *Walker) Walk(
 
 		pkg, err := w.Import(p)
 		if err != nil {
-			return nil, err
+			log.New(os.Stderr, "", log.LstdFlags).Print("skipping failed import: ", err)
+			continue
 		}
 
 		deps := set.Set[string]{}
@@ -65,7 +74,11 @@ func (w *Walker) Walk(
 			return nil, err
 		}
 		for _, imp := range candidates {
-			deps.Add(w.Matcher.Rel(w.Matcher.Resolve(imp)))
+			rel, err := w.Matcher.Rel(w.Matcher.Resolve(imp))
+			if err != nil {
+				return nil, err
+			}
+			deps.Add(rel)
 		}
 		deps, err = w.Walk(deps)
 		if err != nil {

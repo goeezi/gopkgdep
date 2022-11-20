@@ -18,6 +18,14 @@ import "golang.org/x/exp/maps"
 
 type Set[T comparable] map[T]struct{}
 
+func New[T comparable](args ...T) Set[T] {
+	s := Set[T]{}
+	for _, a := range args {
+		s.Add(a)
+	}
+	return s
+}
+
 func (s Set[T]) Has(t T) bool {
 	_, has := s[t]
 	return has
